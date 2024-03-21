@@ -6,9 +6,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
-
-
-
+import { createPool } from 'mysql2/promise';
 
 
 const DB_HOST = process.env.DB_HOST;
@@ -21,13 +19,20 @@ const DB_DATABASE = process.env.DB_DATABASE;
 
 const app = express();
 
-const db = mysql.createConnection({
+export const db = createPool({
     host: DB_HOST,
     port: DB_PORT,
     user: DB_USER,
     password: DB_PASSWORD,
     database: DB_DATABASE
-});
+})
+// const db = mysql.createConnection({
+//     host: DB_HOST   ,
+//     port: DB_PORT,
+//     user: DB_USER,
+//     password: DB_PASSWORD,
+//     database: DB_DATABASE
+// });
 
 app.use(express.json());
 
@@ -38,7 +43,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://test-lyart-zeta.vercel.app/"],
     methods: ["POST", "GET"],
     credentials: true,
 }));
@@ -55,6 +60,7 @@ app.get("/TablaIngreso", (req, res) => {
         return res.json(re)
     })
 });
+
 app.get("/Logs", (req, res) => {
     const q = "SELECT * FROM logs"
     db.query(q, (err, re) => {
@@ -79,13 +85,23 @@ app.get("/Personal%20Externo", (req, res) => {
     })
 })
 
-app.get("/Camiones", (req, res) => {
-    const q = "SELECT * FROM camiones"
-    db.query(q, (err, ca) => {
-        if (err) return res.json(err)
-        return res.json(ca)
-    })
-})
+// app.get("/Camiones", (req, res) => {
+//     const q = "SELECT * FROM camiones;"
+//     db.query(q, (err, ca) => {
+//         if (err) return res.json(err)
+//         return res.json(ca)
+//     })
+// })
+
+app.get("/Camiones", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM camiones");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
 
 // app.get("/empresas", (req, res) => {
 //     const q = "SELECT * FROM empresa"
