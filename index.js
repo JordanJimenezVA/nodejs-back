@@ -52,50 +52,11 @@ app.listen(8800, () => {
     console.log("Server connected");
 });
 
+//GESTION DE PERSONAL EXTERNO
 
-app.get("/TablaIngreso", (req, res) => {
-    const q = "SELECT * FROM registros WHERE ESTADO = 'INGRESO'"
-    db.query(q, (err, re) => {
-        if (err) return res.json(err)
-        return res.json(re)
-    })
-});
-
-app.get("/Logs", (req, res) => {
-    const q = "SELECT * FROM logs"
-    db.query(q, (err, re) => {
-        if (err) return res.json(err)
-        return res.json(re)
-    })
-});
-
-app.get("/Personal%20Interno", (req, res) => {
-    const q = "SELECT * FROM personalinterno"
-    db.query(q, (err, pi) => {
-        if (err) return res.json(err)
-        return res.json(pi)
-    })
-})
-
-app.get("/Personal%20Externo", (req, res) => {
-    const q = "SELECT * FROM personalexterno"
-    db.query(q, (err, pe) => {
-        if (err) return res.json(err)
-        return res.json(pe)
-    })
-})
-
-// app.get("/Camiones", (req, res) => {
-//     const q = "SELECT * FROM camiones;"
-//     db.query(q, (err, ca) => {
-//         if (err) return res.json(err)
-//         return res.json(ca)
-//     })
-// })
-
-app.get("/Camiones", async (req, res) => {
+app.get("/Personal%20Externo", async (req, res) => {
     try {
-        const [rows, fields] = await db.query("SELECT * FROM camiones");
+        const [rows, fields] = await db.query("SELECT * FROM personalexterno");
         res.json(rows);
     } catch (error) {
         console.error('Error al ejecutar la consulta:', error);
@@ -103,51 +64,181 @@ app.get("/Camiones", async (req, res) => {
     }
 });
 
-// app.get("/empresas", (req, res) => {
-//     const q = "SELECT * FROM empresa"
-//     db.query(q, (err, e) => {
-//         if (err) return res.json(err)
-//         return res.json(e)
-//     })
-// });
-
-app.get("/FormularioSalida/:IDR", (req, res) => {
-    const { IDR } = req.params;
-    const q = "SELECT * FROM registros WHERE IDR = ?"
-    db.query(q, [IDR], (err, r) => {
-        if (err) return res.json(err)
-        return res.json(r)
-    })
-});
-
-app.get('/FormularioPersonalExterno/suggestions', (req, res) => {
-    const { query } = req.query;
-    const q = "SELECT * FROM personalexterno WHERE RUTPE LIKE ?";
-    db.query(q, [`%${query}%`], (err, results) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error al obtener sugerencias' });
-        }
+app.get('/FormularioPersonalExterno/suggestions', async (req, res) => {
+    try {
+        const { query } = req.query;
+        const q = "SELECT * FROM personalexterno WHERE RUTPE LIKE ?";
+        const results = await db.query(q, [`%${query}%`]);
         const suggestions = results.map((result) => result.RUTPE);
+        res.json( {results} );
 
-        res.json({ suggestions });
-    });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener sugerencias' });
+    }
 });
 
-app.get('/FormularioPersonalExterno/suggestion/:RUTPE', (req, res) => {
-    const { RUTPE } = req.params;
-    const q = "SELECT * FROM personalexterno WHERE RUTPE = ?";
-    db.query(q, [RUTPE], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error al obtener detalles del Rut' });
-        }
+
+app.get('/FormularioPersonalExterno/suggestion/:RUTPE', async (req, res) => {
+    try {
+        const { RUTPE } = req.params;
+        const q = "SELECT * FROM personalexterno WHERE RUTPE = ?";
+        const result = await db.query(q, [RUTPE]);
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE } = result[0];
+        const { NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE } = result[0][0];
         res.json({ NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE });
-    });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener detalles del Rut' });
+    }
+});
+
+
+app.post("/FormularioPersonalExterno", async (req, res) => {
+    const rutPE = req.body.rutPE;
+    const nombrePE = req.body.NombrePE;
+    const apellidoPE = req.body.ApellidoPE;
+    const vehiculoPE = req.body.VehiculoPE;
+    const colorPE = req.body.ColorPE;
+    const patentePE = req.body.PatentePE;
+    const empresaPE = req.body.EmpresaPE;
+    const rolPE = req.body.RolPE;
+    const estado = "INGRESO"
+    const estadoPE = "VIGENTE";
+    const guiadespachoPE = "-";
+    const observacionesPE = "-";
+    const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    const fechaActualChile = new Date(fechaActualUTC + 'Z');
+    fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+    const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
+
+    try {
+        // Verificar si el RUT existe en la tabla personalexterno
+        const rutExistente = await db.query('SELECT RUTPE FROM personalexterno WHERE RUTPE = ?', [rutPE]);
+        if (rutExistente.length > 0) {
+            // El RUT ya existe, continuar con la inserción en las otras tablas
+            // insert en la tabla registros
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
+
+            // insert into logs
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, '-', fechaActualChileFormatted, estado]);
+
+            res.send('Entrada/salida registrada correctamente');
+            return;
+        }
+
+        // El RUT no existe, insertarlo en la tabla personalexterno
+        await db.query('INSERT INTO personalexterno (RUTPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE]);
+
+        // insert en la tabla registros
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
+
+        // insert into logs
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, '-', fechaActualChileFormatted, estado]);
+
+        res.send('Entrada/salida registrada correctamente');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+// app.post("/FormularioPersonalExterno", (req, res) => {
+//     const rutPE = req.body.rutPE;
+//     const nombrePE = req.body.NombrePE;
+//     const apellidoPE = req.body.ApellidoPE;
+//     const vehiculoPE = req.body.VehiculoPE;
+//     const colorPE = req.body.ColorPE;
+//     const patentePE = req.body.PatentePE;
+//     const empresaPE = req.body.EmpresaPE;
+//     const rolPE = req.body.RolPE;
+//     const estado = "INGRESO"
+//     const estadoPE = "VIGENTE";
+//     const guiadespachoPE = "-";
+//     const observacionesPE = "-";
+//     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+//     const fechaActualChile = new Date(fechaActualUTC + 'Z');
+//     fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+//     const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
+
+//     // insert en la tabla personalexterno
+//     db.query('INSERT INTO personalexterno (RUTPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE], (err, result) => {
+//         if (err) {
+//             console.error('Error al Registrar Personal Externo:', err);
+//             res.status(500).send('Error al Registrar Personal Externo');
+//             return;
+//         }
+
+//         // insert en la tabla registros
+//         db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado], (err, result) => {
+//             if (err) {
+//                 console.error('Error al Registrar Ingreso:', err);
+//                 res.status(500).send('Error al Registrar Ingreso');
+//                 return;
+//             }
+//             res.send('Entrada/salida registrada correctamente');
+//         });
+//         // insert into logs
+//         db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, '-', fechaActualChileFormatted, estado], (err, result) => {
+//             if (err) {
+//                 console.error('Error al ingresar log:', err);
+//                 res.status(500).send('Error al ingresar log');
+//                 return;
+//             }
+//         });
+//     });
+// }); 
+
+// app.post("/FormularioPersonalExterno", async (req, res) => {
+//     const rutPE = req.body.rutPE;
+//     const nombrePE = req.body.NombrePE;
+//     const apellidoPE = req.body.ApellidoPE;
+//     const vehiculoPE = req.body.VehiculoPE;
+//     const colorPE = req.body.ColorPE;
+//     const patentePE = req.body.PatentePE;
+//     const empresaPE = req.body.EmpresaPE;
+//     const rolPE = req.body.RolPE;
+//     const estado = "INGRESO"
+//     const estadoPE = "VIGENTE";
+//     const guiadespachoPE = "-";
+//     const observacionesPE = "-";
+//     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+//     const fechaActualChile = new Date(fechaActualUTC + 'Z');
+//     fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+//     const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
+
+//     try {
+//         // insert en la tabla personalexterno
+//         await db.query('INSERT INTO personalexterno (RUTPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE]);
+
+//         // insert en la tabla registros
+//         await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
+
+//         // insert into logs
+//         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, '-', fechaActualChileFormatted, estado]);
+
+//         res.send('Entrada/salida registrada correctamente');
+//     } catch (error) {
+//         console.error('Error al registrar ingreso:', error);
+//         res.status(500).send('Error al registrar ingreso');
+//     }
+// });
+
+
+//GESTION PERSONAL INTERNO
+
+app.get("/Personal%20Interno", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM personalinterno");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
 });
 
 
@@ -178,35 +269,6 @@ app.get('/FormularioPersonalInterno/suggestion/:RUTPI', (req, res) => {
         }
         const { NOMBREPI, APELLIDOPI, VEHICULOPI, COLORPI, PATENTEPI, ROLPI } = result[0];
         res.json({ NOMBREPI, APELLIDOPI, VEHICULOPI, COLORPI, PATENTEPI, ROLPI });
-    });
-});
-app.get('/FormularioCamiones/suggestions', (req, res) => {
-    const { query } = req.query;
-    const q = "SELECT * FROM camiones WHERE RUTCA LIKE ?";
-    db.query(q, [`%${query}%`], (err, results) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error al obtener sugerencias' });
-        }
-        const suggestions = results.map((result) => result.RUTCA);
-
-        res.json({ suggestions });
-    });
-});
-
-app.get('/FormularioCamiones/suggestion/:RUTCA', (req, res) => {
-    const { RUTCA } = req.params;
-    const q = "SELECT * FROM camiones WHERE RUTCA = ?";
-    db.query(q, [RUTCA], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Error al obtener detalles del Rut' });
-        }
-        if (result.length === 0) {
-            return res.status(404).json({ error: 'Rut no encontrado' });
-        }
-        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA } = result[0];
-        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
     });
 });
 
@@ -282,52 +344,93 @@ app.post("/FormularioPersonalInterno", (req, res) => {
     });
 });
 
-app.post("/FormularioPersonalExterno", (req, res) => {
-    const rutPE = req.body.rutPE;
-    const nombrePE = req.body.NombrePE;
-    const apellidoPE = req.body.ApellidoPE;
-    const vehiculoPE = req.body.VehiculoPE;
-    const colorPE = req.body.ColorPE;
-    const patentePE = req.body.PatentePE;
-    const empresaPE = req.body.EmpresaPE;
-    const rolPE = req.body.RolPE;
-    const estado = "INGRESO"
-    const estadoPE = "VIGENTE";
-    const guiadespachoPE = "-";
-    const observacionesPE = "-";
-    const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-    const fechaActualChile = new Date(fechaActualUTC + 'Z');
-    fechaActualChile.setHours(fechaActualChile.getHours() - 3);
-    const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
 
-    // insert en la tabla personalexterno
-    db.query('INSERT INTO personalexterno (RUTPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE], (err, result) => {
+app.get("/TablaIngreso", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM registros WHERE ESTADO = 'INGRESO'");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+app.get("/Logs", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM logs");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+
+
+
+app.get("/Camiones", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM camiones");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+
+app.get("/FormularioSalida/:IDR", async (req, res) => {
+    const { IDR } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM registros WHERE IDR = ?", [IDR]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+
+
+app.get('/FormularioCamiones/suggestions', (req, res) => {
+    const { query } = req.query;
+    const q = "SELECT * FROM camiones WHERE RUTCA LIKE ?";
+    db.query(q, [`%${query}%`], (err, results) => {
         if (err) {
-            console.error('Error al Registrar Personal Externo:', err);
-            res.status(500).send('Error al Registrar Personal Externo');
-            return;
+            console.error(err);
+            return res.status(500).json({ error: 'Error al obtener sugerencias' });
         }
+        const suggestions = results.map((result) => result.RUTCA);
 
-        // insert en la tabla registros
-        db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado], (err, result) => {
-            if (err) {
-                console.error('Error al Registrar Ingreso:', err);
-                res.status(500).send('Error al Registrar Ingreso');
-                return;
-            }
-            res.send('Entrada/salida registrada correctamente');
-        });
-        // insert into logs
-        db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, '-', fechaActualChileFormatted, estado], (err, result) => {
-            if (err) {
-                console.error('Error al ingresar log:', err);
-                res.status(500).send('Error al ingresar log');
-                return;
-            }
-        });
+        res.json({ suggestions });
     });
 });
+
+app.get('/FormularioCamiones/suggestion/:RUTCA', (req, res) => {
+    const { RUTCA } = req.params;
+    const q = "SELECT * FROM camiones WHERE RUTCA = ?";
+    db.query(q, [RUTCA], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error al obtener detalles del Rut' });
+        }
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'Rut no encontrado' });
+        }
+        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA } = result[0];
+        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
+    });
+});
+
+
+
+
+
 
 app.post("/FormularioCamiones", (req, res) => {
 
