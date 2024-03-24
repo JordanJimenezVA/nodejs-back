@@ -37,7 +37,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(cors({
-    origin: ["http://localhost:5173", "http://test-cyan-one-97.vercel.app"],
+    origin: ["http://localhost:5173", "https://test-cyan-one-97.vercel.app"],
     methods: ["POST", "GET"],
     credentials: true,
 }));
