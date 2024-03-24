@@ -6,14 +6,14 @@ import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import { createPool } from 'mysql2/promise';
-
+import {PORT} from './config.js';
 
 const DB_HOST = process.env.DB_HOST;
 const DB_PORT = process.env.DB_PORT;
 const DB_USER = process.env.DB_USER;
 const DB_PASSWORD = process.env.DB_PASSWORD;
 const DB_DATABASE = process.env.DB_DATABASE;
-const LISTEN_SERVER = process.env.LISTEN_SERVER;
+// const LISTEN_SERVER = process.env.LISTEN_SERVER;
 
 
 
@@ -42,7 +42,7 @@ app.use(cors({
     credentials: true,
 }));
 
-app.listen(LISTEN_SERVER, () => {
+app.listen(PORT, () => {
     console.log("Server connected");
 });
 
