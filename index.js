@@ -43,7 +43,7 @@ app.use(cors({
 }));
 
 app.listen(PORT, () => {
-    console.log("Server connected");
+    console.log("Server connected "+PORT);
 });
 
 //GESTION DE PERSONAL EXTERNO
