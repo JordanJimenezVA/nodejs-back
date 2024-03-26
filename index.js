@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import { createPool } from 'mysql2/promise';
-import {PORT} from './config.js';
+import { PORT } from './config.js';
 
 const DB_HOST = process.env.DB_HOST;
 const DB_PORT = process.env.DB_PORT;
@@ -43,7 +43,7 @@ app.use(cors({
 }));
 
 app.listen(PORT, () => {
-    console.log("Server connected "+PORT);
+    console.log("Server connected " + PORT);
 });
 
 //GESTION DE PERSONAL EXTERNO
@@ -106,13 +106,15 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     const fechaActualChile = new Date(fechaActualUTC + 'Z');
-    fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+    fechaActualChile.setHours(fechaActualChile.getHours());
     const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
 
     try {
         // Verificar si el RUT existe en la tabla personalexterno
-        const rutExistente = await db.query('SELECT RUTPE FROM personalexterno WHERE RUTPE = ?', [rutPE]);
-        if (rutExistente.length > 0) {
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalexterno WHERE RUTPE = ?', [rutPE]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
+            console.log("rut si existe");
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registros
             await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
@@ -129,7 +131,7 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
 
         // insert en la tabla registros
         await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
-
+        console.log("rut no existe paso tabla registros")
         // insert into logs
         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, '-', fechaActualChileFormatted, estado]);
 
@@ -198,13 +200,14 @@ app.post("/FormularioPersonalInterno", async (req, res) => {
     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     const fechaActualChile = new Date(fechaActualUTC + 'Z');
-    fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+    fechaActualChile.setHours(fechaActualChile.getHours());
     const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
 
     try {
         // Verificar si el RUT existe en la tabla personalinterno
-        const rutExistente = await db.query('SELECT RUTPI FROM personalinterno WHERE RUTPI = ?', [rutPI]);
-        if (rutExistente.length > 0) {
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalinterno WHERE RUTPI = ?', [rutPI]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registro
             await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, estado]);
@@ -297,19 +300,20 @@ app.post("/FormularioCamiones", async (req, res) => {
     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     const fechaActualChile = new Date(fechaActualUTC + 'Z');
-    fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+    fechaActualChile.setHours(fechaActualChile.getHours());
     const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
 
     try {
         // Verificar si el RUT existe en la tabla personalinterno
-        const rutExistente = await db.query('SELECT RUTCA FROM camiones WHERE RUTCA = ?', [rutCA]);
-        if (rutExistente.length > 0) {
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM camiones WHERE RUTCA = ?', [rutCA]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registro
             await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
 
             // insert into logs
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA ,fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
@@ -380,7 +384,7 @@ app.post("/FormularioSalida/:IDR", async (req, res) => {
     const estadoCA = "salida";
     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const fechaActualChile = new Date(fechaActualUTC + 'Z');
-    fechaActualChile.setHours(fechaActualChile.getHours() - 3);
+    fechaActualChile.setHours(fechaActualChile.getHours());
 
     const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
 
