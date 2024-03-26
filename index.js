@@ -125,7 +125,7 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
         }
 
         // El RUT no existe, insertarlo en la tabla personalexterno
-        await db.query('INSERT INTO personalexterno (RUTPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE]);
+        await db.query('INSERT INTO personalexterno (RUTPE, NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, EMPRESAPE, ROLPE, ESTADOPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE]);
 
         // insert en la tabla registros
         await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
@@ -267,8 +267,8 @@ app.get('/FormularioCamiones/suggestion/:RUTCA', async (req, res) => {
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA } = result[0][0];
-        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
+        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA, SELLOCA } = result[0][0];
+        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA, SELLOCA });
 
     } catch (error) {
         console.error(error);
@@ -289,6 +289,7 @@ app.post("/FormularioCamiones", async (req, res) => {
     const empresaCA = req.body.EmpresaCA;
     const observacionesCA = req.body.ObservacionesCA;
     const guiaDespachoCA = req.body.GuiaDespachoCA;
+    const selloCA = req.body.SelloCA;
     const estado = "INGRESO"
     const estadoCA = "VIGENTE";
     const rolCA = "CAMION";
@@ -305,10 +306,10 @@ app.post("/FormularioCamiones", async (req, res) => {
         if (rutExistente.length > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registro
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
 
             // insert into logs
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA ,fechaActualChileFormatted, estado]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
@@ -318,7 +319,7 @@ app.post("/FormularioCamiones", async (req, res) => {
         await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, peonetaCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, observacionesCA, guiaDespachoCA, estadoCA]);
 
         // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA , FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
 
         // insert into logs
         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
