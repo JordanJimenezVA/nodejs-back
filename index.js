@@ -268,8 +268,8 @@ app.get('/FormularioCamiones/suggestion/:RUTCA', async (req, res) => {
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA, SELLOCA } = result[0][0];
-        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA, SELLOCA });
+        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA  } = result[0][0];
+        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
 
     } catch (error) {
         console.error(error);
@@ -290,7 +290,7 @@ app.post("/FormularioCamiones", async (req, res) => {
     const empresaCA = req.body.EmpresaCA;
     const observacionesCA = req.body.ObservacionesCA;
     const guiaDespachoCA = req.body.GuiaDespachoCA;
-    const selloCA = req.body.SelloCA;
+    // const selloCA = req.body.SelloCA;
     const estado = "INGRESO"
     const estadoCA = "VIGENTE";
     const rolCA = "CAMION";
@@ -308,10 +308,10 @@ app.post("/FormularioCamiones", async (req, res) => {
         if (count > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registro
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
 
             // insert into logs
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
@@ -321,7 +321,7 @@ app.post("/FormularioCamiones", async (req, res) => {
         await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, peonetaCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, observacionesCA, guiaDespachoCA, estadoCA]);
 
         // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLOCA , FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO , FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
 
         // insert into logs
         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
@@ -379,7 +379,7 @@ app.post("/FormularioSalida/:IDR", async (req, res) => {
     const rol = req.body.ROL;
     const observaciones = req.body.OBSERVACIONES;
     const guiadespacho = req.body.GUIADESPACHO;
-    const estadoCA = "salida";
+    const estadoCA = "SALIDA";
     const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const fechaActualChile = new Date(fechaActualUTC + 'Z');
     fechaActualChile.setHours(fechaActualChile.getHours());
@@ -409,7 +409,7 @@ app.post("/marcarSalida", (req, res) => {
 
     // Aquí debes realizar la actualización en la tabla registros
     // Por ejemplo, suponiendo que la tabla tiene un campo ESTADO que indica si la entrada está vigente
-    db.query('UPDATE registros SET ESTADO = ?, FECHASALIDA = ? WHERE IDR = ?', ['salida', fechaSalida, IDR], (err, result) => {
+    db.query('UPDATE registros SET ESTADO = ?, FECHASALIDA = ? WHERE IDR = ?', ['SALIDA', fechaSalida, IDR], (err, result) => {
         if (err) {
             console.error('Error al marcar salida:', err);
             res.status(500).send('Error al marcar salida');
@@ -438,5 +438,24 @@ app.post('/Login', (req, res) => {
 })
 
 
+// GESTION HOME
 
+app.get("/TopBox", async (req, res) => {
+    try {
+        const data = await db.query("SELECT * FROM logs");
+        res.json(data);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+app.get("/ChartBox", async (req, res) => {
+    try {
+        const data = await db.query("SELECT * FROM registros");
+        res.json(data);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
 
