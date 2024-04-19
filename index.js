@@ -13,7 +13,7 @@ const DB_PORT = process.env.DB_PORT;
 const DB_USER = process.env.DB_USER;
 const DB_PASSWORD = process.env.DB_PASSWORD;
 const DB_DATABASE = process.env.DB_DATABASE;
-// const LISTEN_SERVER = process.env.LISTEN_SERVER;
+//const LISTEN_SERVER = process.env.LISTEN_SERVER;
 
 
 
@@ -45,6 +45,24 @@ app.use(cors({
 app.listen(PORT, () => {
     console.log("Server connected " + PORT);
 });
+
+
+// GESTION LOGIN
+app.post('/Login', (req, res) => {
+    const sql = "SELECT * FROM usuarios WHERE rutU = ? AND passwordU = ?";
+    db.query(sql, [req.body.rutU, req.body.passwordU], (err, data) => {
+        if (err) return res.json({ Message: "Server Error" });
+        if (data.length > 0) {
+            const rut = data[0].rut;
+            const token = pkg.sign({ rut }, "our-jsonwebtoken-secret-key", { expiresIn: '1d' });
+            res.cookie('token', token);
+            return res.json({ Status: "Success" });
+        } else {
+            return res.json({ Message: "No existe" });
+        }
+    })
+})
+
 
 //GESTION DE PERSONAL EXTERNO
 
@@ -319,7 +337,7 @@ app.post("/FormularioCamiones", async (req, res) => {
         }
 
         // El RUT no existe, insertarlo en la tabla camiones
-        await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, peonetaCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, observacionesCA, guiaDespachoCA, estadoCA]);
+        await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, estadoCA]);
 
         // insert en la tabla registros
         await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO , FECHAINGRESO, SELLO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado]);
@@ -423,21 +441,7 @@ app.post("/marcarSalida", (req, res) => {
     });
 });
 
-// GESTION LOGIN
-app.post('/Login', (req, res) => {
-    const sql = "SELECT * FROM usuarios WHERE rutU = ? AND passwordU = ?";
-    db.query(sql, [req.body.rutU, req.body.passwordU], (err, data) => {
-        if (err) return res.json({ Message: "Server Error" });
-        if (data.length > 0) {
-            const rut = data[0].rut;
-            const token = pkg.sign({ rut }, "our-jsonwebtoken-secret-key", { expiresIn: '1d' });
-            res.cookie('token', token);
-            return res.json({ Status: "Success" });
-        } else {
-            return res.json({ Message: "No existe" });
-        }
-    })
-})
+
 
 
 // GESTION HOME
