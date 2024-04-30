@@ -38,7 +38,7 @@ app.use(cookieParser());
 
 app.use(cors({
     origin: ["http://localhost:5173", "https://test-cyan-one-97.vercel.app"],
-    methods: ["POST", "GET"],
+    methods: ["POST", "GET", "DELETE", "PUT"],
     credentials: true,
 }));
 
@@ -46,22 +46,320 @@ app.listen(PORT, () => {
     console.log("Server connected " + PORT);
 });
 
+//GESTION MANTENEDOR PERSONAL INTERNO
+
+app.put("/EditarPersonalInterno/:IDPI", async (req, res) => {
+    const IDPI = req.params.IDPI;
+    const { RUTPI, NOMBREPI, APELLIDOPI, ROLPI, ESTADOPI, VEHICULOPI, PATENTEPI, COLORPI } = req.body;
+
+    try {
+        // Verificar si el IDPI existe en la tabla personalinterno
+        const existenciaPI = await db.query('SELECT COUNT(*) AS count FROM personalinterno WHERE IDPI = ?', [IDPI]);
+        const count = existenciaPI[0][0].count;
+        if (count === 0) {
+            // El IDPI no existe en la tabla personalinterno
+            res.status(404).send('El IDPI no existe en la base de datos');
+            return;
+        }
+
+        // El IDPI existe, actualizar los datos en la tabla personalinterno
+        await db.query('UPDATE personalinterno SET RUTPI = ?, NOMBREPI = ?, APELLIDOPI = ?, ROLPI = ?, ESTADOPI = ?, VEHICULOPI = ?, PATENTEPI = ?, COLORPI = ? WHERE IDPI = ?', [RUTPI, NOMBREPI, APELLIDOPI, ROLPI, ESTADOPI, VEHICULOPI, PATENTEPI, COLORPI, IDPI]);
+
+        res.send('Actualización realizada con éxito');
+    } catch (error) {
+        console.error('Error al realizar la actualización:', error);
+        res.status(500).send('Error al realizar la actualización');
+    }
+});
+
+app.get("/EditarPersonalInterno/:IDPI", async (req, res) => {
+    const { IDPI } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM personalinterno WHERE IDPI = ?", [IDPI]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+app.delete("/Personal%20Interno/:IDPI", async (req, res) => {
+    const { IDPI } = req.params;
+    try {
+        await db.query(`DELETE FROM personalinterno WHERE IDPI = ?`, [IDPI]);
+
+        res.send("Usuario eliminado correctamente");
+    } catch (error) {
+        console.error("Error al eliminar registro:", error);
+        res.status(500).send("Error al eliminar registro");
+    }
+});
+
+app.post("/AgregarPersonalInterno", async (req, res) => {
+    const rutPI = req.body.rutPI;
+    const nombrePI = req.body.NombrePI;
+    const apellidoPI = req.body.ApellidoPI;
+    const vehiculoPI = req.body.VehiculoPI;
+    const colorPI = req.body.ColorPI;
+    const patentePI = req.body.PatentePI;
+    const rolPI = req.body.RolPI;
+    const estadoPI = "VIGENTE";
+
+
+    try {
+        // Verificar si el RUT existe en la tabla personalinterno
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalinterno WHERE RUTPI = ?', [rutPI]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
+            // El RUT ya existe en la tabla personalinterno
+            res.send('El RUT ya existe en la base de datos');
+            return;
+        }
+
+        // El RUT no existe, insertarlo en la tabla personalinterno
+        await db.query('INSERT INTO personalinterno (RUTPI, nombrePI, apellidoPI, vehiculoPI, colorPI, patentePI, rolPI, estadoPI) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [rutPI, nombrePI, apellidoPI, vehiculoPI, colorPI, patentePI, rolPI, estadoPI]);
+
+        res.send('Ingreso realizado con exito');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+
+
+
+
+
+
+
+
+//GESTION MANTENEDOR PERSONAL EXTERNO
+
+app.put("/EditarPersonalExterno/:IDPE", async (req, res) => {
+    const IDPE = req.params.IDPE;
+    const { RUTPE, NOMBREPE, APELLIDOPE, ROLPE, EMPRESAPE, ESTADOPE, VEHICULOPE, PATENTEPE, COLORPE } = req.body;
+
+    try {
+        // Verificar si el IDPE existe en la tabla personalinterno
+        const existenciaPI = await db.query('SELECT COUNT(*) AS count FROM personalexterno WHERE IDPE = ?', [IDPE]);
+        const count = existenciaPI[0][0].count;
+        if (count === 0) {
+            // El IDPI no existe en la tabla personalinterno
+            res.status(404).send('El IDPE no existe en la base de datos');
+            return;
+        }
+
+        // El IDPI existe, actualizar los datos en la tabla personalinterno
+        await db.query('UPDATE personalexterno SET RUTPE = ?, NOMBREPE = ?, APELLIDOPE = ?, ROLPE = ?, EMPRESAPE = ?, ESTADOPE = ?, VEHICULOPE = ?, PATENTEPE = ?, COLORPE = ? WHERE IDPE = ?', [RUTPE, NOMBREPE, APELLIDOPE, ROLPE, EMPRESAPE, ESTADOPE, VEHICULOPE, PATENTEPE, COLORPE, IDPE]);
+
+        res.send('Actualización realizada con éxito');
+    } catch (error) {
+        console.error('Error al realizar la actualización:', error);
+        res.status(500).send('Error al realizar la actualización');
+    }
+});
+
+app.get("/EditarPersonalExterno/:IDPE", async (req, res) => {
+    const { IDPE } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM personalexterno WHERE IDPE = ?", [IDPE]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+app.delete("/Personal%20Externo/:IDPE", async (req, res) => {
+    const { IDPE } = req.params;
+    try {
+        await db.query(`DELETE FROM personalexterno WHERE IDPE = ?`, [IDPE]);
+
+        res.send("Usuario eliminado correctamente");
+    } catch (error) {
+        console.error("Error al eliminar registro:", error);
+        res.status(500).send("Error al eliminar registro");
+    }
+});
+
+app.post("/AgregarPersonalExterno", async (req, res) => {
+    const rutPE = req.body.rutPE;
+    const nombrePE = req.body.NombrePE;
+    const apellidoPE = req.body.ApellidoPE;
+    const vehiculoPE = req.body.VehiculoPE;
+    const colorPE = req.body.ColorPE;
+    const patentePE = req.body.PatentePE;
+    const rolPE = req.body.RolPE;
+    const empresaPE = req.body.EmpresaPE;
+    const estadoPE = "VIGENTE";
+
+
+    try {
+        // Verificar si el RUT existe en la tabla personalinterno
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalexterno WHERE RUTPE = ?', [rutPE]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
+            // El RUT ya existe en la tabla personalinterno
+            res.send('El RUT ya existe en la base de datos');
+            return;
+        }
+
+        // El RUT no existe, insertarlo en la tabla personalexterno
+        await db.query('INSERT INTO personalexterno (RUTPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, rolPE, empresaPE, estadoPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, rolPE, empresaPE, estadoPE]);
+
+        res.send('Ingreso realizado con exito');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+
+
+
+
+//GESTION MANTENEDOR CAMION
+
+app.put("/EditarCamiones/:IDCA", async (req, res) => {
+    const IDCA = req.params.IDCA;
+    const { RUTCA, CHOFERCA, APELLIDOCHOFERCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA } = req.body;
+
+    try {
+        // Verificar si el IDPE existe en la tabla camiones
+        const existenciaPI = await db.query('SELECT COUNT(*) AS count FROM camiones WHERE IDCA = ?', [IDCA]);
+        const count = existenciaPI[0][0].count;
+        if (count === 0) {
+            // El IDPI no existe en la tabla camiones
+            res.status(404).send('El IDCA no existe en la base de datos');
+            return;
+        }
+
+        // El IDPI existe, actualizar los datos en la tabla camiones
+        await db.query('UPDATE camiones SET CHOFERCA = ?, APELLIDOCHOFERCA = ?, RUTCA = ?, PATENTECA = ?, MARCACA = ?, TIPOCA = ?, MODELOCA = ?, COLORCA = ?, EMPRESACA = ?, ESTADOCA = ? WHERE IDCA = ?', [CHOFERCA, APELLIDOCHOFERCA, RUTCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA, IDCA]);
+
+
+        res.send('Actualización realizada con éxito');
+    } catch (error) {
+        console.error('Error al realizar la actualización:', error);
+        res.status(500).send('Error al realizar la actualización');
+    }
+});
+
+app.get("/EditarCamiones/:IDCA", async (req, res) => {
+    const { IDCA } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM camiones WHERE IDCA = ?", [IDCA]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+app.delete("/camiones/:IDCA", async (req, res) => {
+    const { IDCA } = req.params;
+    try {
+        await db.query(`DELETE FROM camiones WHERE IDCA = ?`, [IDCA]);
+
+        res.send("Usuario eliminado correctamente");
+    } catch (error) {
+        console.error("Error al eliminar registro:", error);
+        res.status(500).send("Error al eliminar registro");
+    }
+});
+
+app.post("/AgregarCamion", async (req, res) => {
+    const rutCA = req.body.RutCA;
+    const choferCA = req.body.ChoferCA;
+    const apellidoCA = req.body.ApellidoCA;
+    const tipoCA = req.body.TipoCA;
+    const modeloCA = req.body.ModeloCA;
+    const colorCA = req.body.ColorCA;
+    const patenteCA = req.body.PatenteCA;
+    const marcaCA = req.body.MarcaCA;
+    const empresaCA = req.body.EmpresaCA;
+    const estadoCA = "VIGENTE";
+
+
+    try {
+        // Verificar si el RUT existe en la tabla camiones
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM camiones WHERE RUTCA = ?', [rutCA]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
+            // El RUT ya existe en la tabla camiones
+            res.send('El RUT ya existe en la base de datos');
+            return;
+        }
+
+        // El RUT no existe, insertarlo en la tabla personalexterno
+        await db.query('INSERT INTO camiones (rutCA, choferCA, apellidoCA, tipoCA, modeloCA, colorCA, patenteCA, marcaCA, empresaCA, estadoCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutCA, choferCA, apellidoCA, tipoCA, modeloCA, colorCA, patenteCA, marcaCA, empresaCA, estadoCA]);
+
+        res.send('Ingreso realizado con exito');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+
+
+
 
 // GESTION LOGIN
-app.post('/Login', (req, res) => {
-    const sql = "SELECT * FROM usuarios WHERE rutU = ? AND passwordU = ?";
-    db.query(sql, [req.body.rutU, req.body.passwordU], (err, data) => {
-        if (err) return res.json({ Message: "Server Error" });
-        if (data.length > 0) {
-            const rut = data[0].rut;
-            const token = pkg.sign({ rut }, "our-jsonwebtoken-secret-key", { expiresIn: '1d' });
+
+app.get('/UserType/', async (req, res) => {
+    const { RUTU } = req.query;
+
+    if (!RUTU) {
+        return res.status(400).json({ message: 'El parámetro rut es requerido' });
+    }
+
+    const sql = "SELECT TIPOU, NOMBREU FROM usuarios WHERE RUTU = ?";
+    try {
+        const [rows] = await db.query(sql, [RUTU.toString()]);
+        if (rows.length > 0) {
+            const userType = rows[0].TIPOU;
+            const nombreUsuario = rows[0].NOMBREU;
+            return res.json({ userType, nombreUsuario });
+        } else {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+    } catch (err) {
+        console.log("Error executing query:", err);
+        return res.status(500).json({ Message: "Server Error" });
+    }
+});
+
+
+
+
+app.get('/Logout', (req, res) => {
+    res.clearCookie('token');
+    return res.json({Status: "Sucess"})
+})
+
+app.post('/Login', async (req, res) => {
+
+    const sql = "SELECT * FROM usuarios WHERE RUTU = ? AND PASSWORDU = ?";
+    try {
+        const [rows] = await db.query(sql, [req.body.rutU, req.body.passwordU]);
+        if (rows.length > 0) {
+            // Usuario autenticado correctamente
+            const rut = rows[0].RUTU;
+            const token = jwt.sign({ rut }, "our-jsonwebtoken-secret-key", { expiresIn: '1d' });
             res.cookie('token', token);
             return res.json({ Status: "Success" });
         } else {
-            return res.json({ Message: "No existe" });
+            // Credenciales incorrectas
+            return res.json({ Message: "Credenciales incorrectas" });
         }
-    })
-})
+    } catch (err) {
+        console.log("Error executing query:", err);
+        return res.status(500).json({ Message: "Server Error" });
+    }
+});
+
+
+
 
 
 //GESTION DE PERSONAL EXTERNO
