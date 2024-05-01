@@ -37,7 +37,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use(cors({
-    origin: ["http://localhost:5173", "https://nodejs-back-production.up.railway.app"],
+    origin: ["http://localhost:5173", "https://sistemasandes.vercel.app"],
     methods: ["POST", "GET", "DELETE", "PUT"],
     credentials: true,
 }));
