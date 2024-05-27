@@ -106,9 +106,20 @@ app.get("/Revision", async (req, res) => {
 });
 
 
+app.get("/ProgresoRevision/:IDR", async (req, res) => {
+    const { IDR } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM progresorevision WHERE IDR = ?", [IDR]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
 
-app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
-    const IDR = req.params.IDR;
+
+app.post("/GuardarProgreso/:IDR", upload.array('FOTOS'), async (req, res) => {
+    const { IDR } = req.params;
     const personal = req.body.PERSONAL;
     const apellido = req.body.APELLIDO;
     const rut = req.body.RUT;
@@ -122,26 +133,35 @@ app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
     const pallets = req.body.PALLETS;
     const supervisor = req.body.SUPERVISOR;
     const jefet = req.body.JEFET;
-    const fotos = req.files.map(file => file.filename);
-    const fechaInicio = req.body.fechaInicio;
-    const fechaFin = req.body.fechaFin;
-
-
+    const fotos = req.files ? req.files.map(file => file.filename) : [];
 
     try {
+        // Verificar si ya existe un registro en progresorevision para el IDR dado
+        const [existingRows] = await db.query("SELECT IDR FROM progresorevision WHERE IDR = ?", [IDR]);
 
+        if (existingRows.length > 0) {
+            // Construir consulta de actualización dinámica
+            const fields = [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet];
+            let updateQuery = "UPDATE progresorevision SET PERSONAL = ?, APELLIDO = ?, RUT = ?, PATENTE = ?, ROL = ?, OBSERVACIONES = ?, GUIADESPACHO = ?, SELLO = ?, ANDEN = ?, KILOS = ?, PALLETS = ?, SUPERVISOR = ?, JEFET = ?";
+            
+            if (fotos.length > 0) {
+                updateQuery += ", FOTOS = ?";
+                fields.push(fotos.join(', '));
+            }
 
-        // Obtener los datos binarios de la imagen
-        await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin]);
+            updateQuery += " WHERE IDR = ?";
+            fields.push(IDR);
 
-        await db.query('UPDATE registros SET CHEQUEO = ? WHERE IDR = ?', ['SI', IDR]);
-        //await db.query('DELETE FROM registros WHERE IDR = ?', [IDR]);
-
-        res.send('Revision realizada correctamente');
-
+            await db.query(updateQuery, fields);
+            res.json({ message: 'Progreso actualizado correctamente' });
+        } else {
+            // Insertar un nuevo registro
+            await db.query('INSERT INTO progresorevision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, IDR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, IDR]);
+            res.json({ message: 'Progreso guardado correctamente' });
+        }
     } catch (error) {
-        console.error('Error al marcar salida:', error);
-        res.status(500).send('Error al marcar salida');
+        console.error('Error al guardar el progreso:', error);
+        res.status(500).json({ error: 'Error al guardar el progreso' });
     }
 });
 
@@ -476,7 +496,7 @@ app.get("/Personal%20Externo", async (req, res) => {
 app.get('/FormularioPersonalExterno/suggestions', async (req, res) => {
     try {
         const { query } = req.query;
-        const q = "SELECT * FROM personalexterno WHERE RUTPE LIKE ?";
+        const q = "SELECT * FROM personalexterno WHERE RUTPE LIKE ? AND ESTADOPE = 'VIGENTE'";
         const results = await db.query(q, [`%${query}%`]);
         const suggestions = results.map((result) => result.RUTPE);
         res.json({ results });
@@ -569,7 +589,7 @@ app.get("/Personal%20Interno", async (req, res) => {
 app.get('/FormularioPersonalInterno/suggestions', async (req, res) => {
     try {
         const { query } = req.query;
-        const q = "SELECT * FROM personalinterno WHERE RUTPI LIKE ?";
+        const q = "SELECT * FROM personalexterno WHERE RUTPE LIKE ? AND ESTADOPI = 'VIGENTE'";
         const results = await db.query(q, [`%${query}%`]);
         res.json({ results });
 
@@ -661,7 +681,7 @@ app.get("/Camiones", async (req, res) => {
 app.get('/FormularioCamiones/suggestions', async (req, res) => {
     try {
         const { query } = req.query;
-        const q = "SELECT * FROM camiones WHERE RUTCA LIKE ?";
+        const q = "SELECT * FROM camiones WHERE RUTCA LIKE ? AND ESTADOCA = 'VIGENTE'";
         const results = await db.query(q, [`%${query}%`]);
         res.json({ results });
 
