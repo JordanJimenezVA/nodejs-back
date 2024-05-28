@@ -194,6 +194,7 @@ app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
         const fechaInicio = req.body.fechaInicio;
         const fechaFin = req.body.fechaFin;
 
+
         await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
 
         await db.query('UPDATE registros SET CHEQUEO = ? WHERE IDR = ?', ['SI', IDR]);
