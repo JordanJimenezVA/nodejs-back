@@ -94,6 +94,11 @@ app.get("/VerInforme/:IDR", async (req, res) => {
     }
 });
 
+
+
+
+
+
 //GESTION REVISION
 app.get("/Revision", async (req, res) => {
     try {
@@ -134,6 +139,7 @@ app.post("/GuardarProgreso/:IDR", upload.array('FOTOS'), async (req, res) => {
     const supervisor = req.body.SUPERVISOR;
     const jefet = req.body.JEFET;
     const fotos = req.files ? req.files.map(file => file.filename) : [];
+    const fechaInicio = req.body.fechaInicio;
 
     try {
         // Verificar si ya existe un registro en progresorevision para el IDR dado
@@ -156,12 +162,46 @@ app.post("/GuardarProgreso/:IDR", upload.array('FOTOS'), async (req, res) => {
             res.json({ message: 'Progreso actualizado correctamente' });
         } else {
             // Insertar un nuevo registro
-            await db.query('INSERT INTO progresorevision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, IDR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, IDR]);
+            await db.query('INSERT INTO progresorevision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, IDR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, IDR]);
             res.json({ message: 'Progreso guardado correctamente' });
         }
     } catch (error) {
         console.error('Error al guardar el progreso:', error);
         res.status(500).json({ error: 'Error al guardar el progreso' });
+    }
+});
+
+app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
+    try {
+        if (!req.files) {
+            return res.status(400).send('No se recibieron archivos');
+        }
+        const { IDR } = req.params;
+        const personal = req.body.PERSONAL;
+        const apellido = req.body.APELLIDO;
+        const rut = req.body.RUT;
+        const patente = req.body.PATENTE;
+        const rol = req.body.ROL;
+        const observaciones = req.body.OBSERVACIONES;
+        const guiadespacho = req.body.GUIADESPACHO;
+        const selloCA = req.body.SELLO;
+        const anden = req.body.ANDEN;
+        const kilos = req.body.KILOS;
+        const pallets = req.body.PALLETS;
+        const supervisor = req.body.SUPERVISOR;
+        const jefet = req.body.JEFET;
+        const fotos = req.files ? req.files.map(file => file.filename) : [];
+        const fechaInicio = req.body.fechaInicio;
+        const fechaFin = req.body.fechaFin;
+
+        await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
+
+        await db.query('UPDATE registros SET CHEQUEO = ? WHERE IDR = ?', ['SI', IDR]);
+
+        res.send('Revision realizada correctamente');
+    } catch (error) {
+        console.error('Error al marcar salida:', error);
+        res.status(500).send('Error al marcar salida');
     }
 });
 
