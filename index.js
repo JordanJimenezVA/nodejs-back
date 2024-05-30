@@ -102,7 +102,7 @@ app.get("/VerInforme/:IDR", async (req, res) => {
 //GESTION REVISION
 app.get("/Revision", async (req, res) => {
     try {
-        const [rows, fields] = await db.query("SELECT * FROM registros WHERE rol = 'CAMION' AND chequeo = 'NO'");
+        const [rows, fields] = await db.query("SELECT * FROM registros WHERE rol = 'CAMION' AND chequeado = 'NO'");
         res.json(rows);
     } catch (error) {
         console.error('Error al ejecutar la consulta:', error);
@@ -140,7 +140,7 @@ app.post("/GuardarProgreso/:IDR", upload.array('FOTOS'), async (req, res) => {
     const jefet = req.body.JEFET;
     const fotos = req.files ? req.files.map(file => file.filename) : [];
     const fechaInicio = req.body.fechaInicio;
-
+    const estado = "REVISANDO";
     try {
         // Verificar si ya existe un registro en progresorevision para el IDR dado
         const [existingRows] = await db.query("SELECT IDR FROM progresorevision WHERE IDR = ?", [IDR]);
@@ -162,7 +162,7 @@ app.post("/GuardarProgreso/:IDR", upload.array('FOTOS'), async (req, res) => {
             res.json({ message: 'Progreso actualizado correctamente' });
         } else {
             // Insertar un nuevo registro
-            await db.query('INSERT INTO progresorevision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, IDR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, IDR]);
+            await db.query('INSERT INTO progresorevision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, IDR, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, IDR, estado]);
             res.json({ message: 'Progreso guardado correctamente' });
         }
     } catch (error) {
@@ -196,8 +196,8 @@ app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
 
 
         await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
-
-        await db.query('UPDATE registros SET CHEQUEO = ? WHERE IDR = ?', ['SI', IDR]);
+        await db.query('UPDATE progresorevision SET ESTADO = ? WHERE IDR = ?', ['REVISADO', IDR]);
+        await db.query('UPDATE registros SET CHEQUEADO = ? WHERE IDR = ?', ['SI', IDR]);
 
         res.send('Revision realizada correctamente');
     } catch (error) {
@@ -255,6 +255,7 @@ app.delete("/Personal%20Interno/:IDPI", async (req, res) => {
         res.status(500).send("Error al eliminar registro");
     }
 });
+
 
 app.post("/AgregarPersonalInterno", async (req, res) => {
     const rutPI = req.body.rutPI;
@@ -429,9 +430,9 @@ app.delete("/camiones/:IDCA", async (req, res) => {
 });
 
 app.post("/AgregarCamion", async (req, res) => {
-    const rutCA = req.body.RutCA;
     const choferCA = req.body.ChoferCA;
     const apellidoCA = req.body.ApellidoCA;
+    const rutCA = req.body.RutCA;
     const tipoCA = req.body.TipoCA;
     const modeloCA = req.body.ModeloCA;
     const colorCA = req.body.ColorCA;
@@ -439,7 +440,6 @@ app.post("/AgregarCamion", async (req, res) => {
     const marcaCA = req.body.MarcaCA;
     const empresaCA = req.body.EmpresaCA;
     const estadoCA = "VIGENTE";
-
 
     try {
         // Verificar si el RUT existe en la tabla camiones
@@ -452,7 +452,7 @@ app.post("/AgregarCamion", async (req, res) => {
         }
 
         // El RUT no existe, insertarlo en la tabla personalexterno
-        await db.query('INSERT INTO camiones (rutCA, choferCA, apellidoCA, tipoCA, modeloCA, colorCA, patenteCA, marcaCA, empresaCA, estadoCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutCA, choferCA, apellidoCA, tipoCA, modeloCA, colorCA, patenteCA, marcaCA, empresaCA, estadoCA]);
+        await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidoCA, rutCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, estadoCA]);
 
         res.send('Ingreso realizado con exito');
     } catch (error) {
@@ -590,7 +590,7 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
         if (count > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registros
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, selloCA, estado, chequeo]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, selloCA, estado, chequeo]);
 
             // insert into logs
             await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
@@ -603,7 +603,7 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
         await db.query('INSERT INTO personalexterno (RUTPE, NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, EMPRESAPE, ROLPE, ESTADOPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE]);
 
         // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO ,ESTADO, CHEQUEO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, selloCA, estado, chequeo]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO ,ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, selloCA, estado, chequeo]);
         // insert into logs
         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
 
@@ -680,7 +680,7 @@ app.post("/FormularioPersonalInterno", async (req, res) => {
         if (count > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registro
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, selloCA, estado, chequeo]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, selloCA, estado, chequeo]);
 
             // insert into logs
             await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, estado]);
@@ -693,7 +693,7 @@ app.post("/FormularioPersonalInterno", async (req, res) => {
         await db.query('INSERT INTO personalinterno (RUTPI, nombrePI, apellidoPI, vehiculoPI, colorPI, patentePI, rolPI, estadoPI) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [rutPI, nombrePI, apellidoPI, vehiculoPI, colorPI, patentePI, rolPI, estadoPI]);
 
         // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, selloCA, estado, chequeo]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, selloCA, estado, chequeo]);
 
         // insert into logs
         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, estado]);
@@ -740,8 +740,8 @@ app.get('/FormularioCamiones/suggestion/:RUTCA', async (req, res) => {
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA } = result[0][0];
-        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PEONETACA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
+        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA } = result[0][0];
+        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
 
     } catch (error) {
         console.error(error);
@@ -776,7 +776,7 @@ app.post("/FormularioCamiones", async (req, res) => {
         if (count > 0) {
             // El RUT ya existe, continuar con la inserción en las otras tablas
             // insert en la tabla registro
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado, chequeo]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado, chequeo]);
             // insert into logs
             await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
 
@@ -788,7 +788,7 @@ app.post("/FormularioCamiones", async (req, res) => {
         await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, estadoCA]);
 
         // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO , FECHAINGRESO, SELLO, ESTADO, CHEQUEO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado, chequeo]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO , FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado, chequeo]);
 
         // insert into logs
         await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
@@ -803,16 +803,30 @@ app.post("/FormularioCamiones", async (req, res) => {
 
 // GESTION DE INGRESOS/SALIDAS
 
+// app.get("/TablaIngreso", async (req, res) => {
+//     try {
+//         const [rows, fields] = await db.query("SELECT * FROM registros WHERE ESTADO = 'INGRESO'");
+//         res.json(rows);
+//     } catch (error) {
+//         console.error('Error al ejecutar la consulta:', error);
+//         res.status(500).json({ error: 'Error al ejecutar la consulta' });
+//     }
+// });
 app.get("/TablaIngreso", async (req, res) => {
     try {
-        const [rows, fields] = await db.query("SELECT * FROM registros WHERE ESTADO = 'INGRESO'");
+        const query = `
+            SELECT registros.*, progresorevision.ESTADO AS estadoRevision
+            FROM registros
+            LEFT JOIN progresorevision ON registros.IDR = progresorevision.IDR
+            WHERE registros.ESTADO = 'INGRESO'
+        `;
+        const [rows, fields] = await db.query(query);
         res.json(rows);
     } catch (error) {
         console.error('Error al ejecutar la consulta:', error);
         res.status(500).json({ error: 'Error al ejecutar la consulta' });
     }
 });
-
 
 app.get("/Logs", async (req, res) => {
     try {
@@ -848,15 +862,11 @@ app.post("/FormularioSalida/:IDR", async (req, res) => {
     const guiadespacho = req.body.GUIADESPACHO;
     const selloCA = req.body.SelloCA;
     const estadoCA = "SALIDA";
-    const fechaActualUTC = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const fechaActualChile = new Date(fechaActualUTC + 'Z');
-    fechaActualChile.setHours(fechaActualChile.getHours());
-
-    const fechaActualChileFormatted = fechaActualChile.toISOString().slice(0, 19).replace('T', ' ');
+    const fechasalida = req.body.FECHASALIDA;
 
     try {
 
-        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHASALIDA, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, fechaActualChileFormatted, estadoCA]);
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHASALIDA, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, fechasalida, estadoCA]);
 
         // await db.query('UPDATE registros SET ESTADO = ? WHERE IDR = ?', ['SALIDA', IDR]);
         await db.query('DELETE FROM registros WHERE IDR = ?', [IDR]);
