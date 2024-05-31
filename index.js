@@ -630,7 +630,7 @@ app.get("/Personal%20Interno", async (req, res) => {
 app.get('/FormularioPersonalInterno/suggestions', async (req, res) => {
     try {
         const { query } = req.query;
-        const q = "SELECT * FROM personalexterno WHERE RUTPE LIKE ? AND ESTADOPI = 'VIGENTE'";
+        const q = "SELECT * FROM personalinterno WHERE RUTPI LIKE ? AND ESTADOPI = 'VIGENTE'";
         const results = await db.query(q, [`%${query}%`]);
         res.json({ results });
 
