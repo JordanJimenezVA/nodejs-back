@@ -632,6 +632,7 @@ app.get('/FormularioPersonalInterno/suggestions', async (req, res) => {
         const { query } = req.query;
         const q = "SELECT * FROM personalinterno WHERE RUTPI LIKE ? AND ESTADOPI = 'VIGENTE'";
         const results = await db.query(q, [`%${query}%`]);
+        const suggestions = results.map((result) => result.RUTPI);
         res.json({ results });
 
     } catch (error) {
