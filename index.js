@@ -71,6 +71,80 @@ app.listen(PORT, () => {
 
 
 
+
+//GESTION PERSONAL NG
+app.put("/EditarPersonasReportadas/:IDNG", async (req, res) => {
+    const IDNG = req.params.IDNG;
+    const { RUTNG, ESTADONG } = req.body;
+
+    try {
+        // Verificar si el IDPI existe en la tabla personalinterno
+        const existenciaNG = await db.query('SELECT COUNT(*) AS count FROM personasng WHERE IDNG = ?', [IDNG]);
+        const count = existenciaNG[0][0].count;
+        if (count === 0) {
+            // El IDPI no existe en la tabla personalinterno
+            res.status(404).send('La Persona no existe en la base de datos');
+            return;
+        }
+
+        // El IDPI existe, actualizar los datos en la tabla personalinterno
+        await db.query('UPDATE personasng SET RUTNG = ?, ESTADONG = ? WHERE IDNG = ?', [RUTNG, ESTADONG, IDNG]);
+
+        res.send('Actualización realizada con éxito');
+    } catch (error) {
+        console.error('Error al realizar la actualización:', error);
+        res.status(500).send('Error al realizar la actualización');
+    }
+});
+
+app.get("/EditarPersonasReportadas/:IDNG", async (req, res) => {
+    const { IDNG } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM personasng WHERE IDNG = ?", [IDNG]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+app.get("/PersonasReportadas", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM personasng");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+app.post("/AgregarPersonaNG", async (req, res) => {
+
+    const rutNG = req.body.RutNG;
+    const estadoNG = req.body.EstadoNG;
+
+    try {
+        // Verificar si el RUT existe en la tabla camiones
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personasng WHERE RUTNG = ?', [rutNG]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
+            // El RUT ya existe en la tabla camiones
+            res.send('El RUT ya existe en la base de datos');
+            return;
+        }
+
+        // El RUT no existe, insertarlo en la tabla personalexterno
+        await db.query('INSERT INTO personasng (RUTNG, ESTADONG) VALUES (?, ?)', [rutNG, estadoNG]);
+
+        res.send('Ingreso realizado con exito');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+
+
 //GESTION INFORMES CAMION
 
 app.get("/InformeCamion", async (req, res) => {
@@ -149,7 +223,7 @@ app.post("/GuardarProgreso/:IDR", upload.array('FOTOS'), async (req, res) => {
             // Construir consulta de actualización dinámica
             const fields = [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet];
             let updateQuery = "UPDATE progresorevision SET PERSONAL = ?, APELLIDO = ?, RUT = ?, PATENTE = ?, ROL = ?, OBSERVACIONES = ?, GUIADESPACHO = ?, SELLO = ?, ANDEN = ?, KILOS = ?, PALLETS = ?, SUPERVISOR = ?, JEFET = ?";
-            
+
             if (fotos.length > 0) {
                 updateQuery += ", FOTOS = ?";
                 fields.push(fotos.join(', '));
@@ -193,8 +267,7 @@ app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
         const fotos = req.files ? req.files.map(file => file.filename) : [];
         const fechaInicio = req.body.fechaInicio;
         const fechaFin = req.body.fechaFin;
-        console.log(fechaInicio);
-        console.log(fechaFin);
+
 
         await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
         await db.query('UPDATE progresorevision SET ESTADO = ? WHERE IDR = ?', ['REVISADO', IDR]);
@@ -549,17 +622,31 @@ app.get('/FormularioPersonalExterno/suggestions', async (req, res) => {
     }
 });
 
-
 app.get('/FormularioPersonalExterno/suggestion/:RUTPE', async (req, res) => {
     try {
         const { RUTPE } = req.params;
-        const q = "SELECT * FROM personalexterno WHERE RUTPE = ?";
-        const result = await db.query(q, [RUTPE]);
+        const query = `
+            SELECT 
+                pe.NOMBREPE, pe.APELLIDOPE, pe.VEHICULOPE, pe.COLORPE, 
+                pe.PATENTEPE, pe.ROLPE, pe.EMPRESAPE, png.ESTADONG
+            FROM 
+                personalexterno pe
+            LEFT JOIN 
+                personasng png ON pe.RUTPE = png.RUTNG
+            WHERE 
+                pe.RUTPE = ?
+        `;
+
+        const [result] = await db.query(query, [RUTPE]);
+
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE } = result[0][0];
-        res.json({ NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE });
+
+        const { NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE, ESTADONG } = result[0];
+
+
+        res.json({ NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, ROLPE, EMPRESAPE, ESTADONG });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener detalles del Rut' });
@@ -568,45 +655,39 @@ app.get('/FormularioPersonalExterno/suggestion/:RUTPE', async (req, res) => {
 
 
 app.post("/FormularioPersonalExterno", async (req, res) => {
-    const rutPE = req.body.rutPE;
-    const nombrePE = req.body.NombrePE;
-    const apellidoPE = req.body.ApellidoPE;
-    const vehiculoPE = req.body.VehiculoPE;
-    const colorPE = req.body.ColorPE;
-    const patentePE = req.body.PatentePE;
-    const empresaPE = req.body.EmpresaPE;
-    const rolPE = req.body.RolPE;
-    const observacionesPE = req.body.ObservacionesPE;
-    const estado = "INGRESO"
+    const { rutPE, NombrePE, ApellidoPE, VehiculoPE, ColorPE, PatentePE, EmpresaPE, RolPE, ObservacionesPE, fechaActualChile } = req.body;
+    const estado = "INGRESO";
     const estadoPE = "VIGENTE";
     const guiadespachoPE = "-";
     const selloCA = "-";
     const chequeo = "NO";
-    const fechaActualChileFormatted = req.body.fechaActualChile;
 
     try {
-        // Verificar si el RUT existe en la tabla personalexterno
+        // Verificar si el RUT ya existe en la tabla registros
+        const rutExistenteRegistros = await db.query('SELECT COUNT(*) AS count FROM registros WHERE RUT = ?', [rutPE]);
+        const countRegistros = rutExistenteRegistros[0][0].count;
+        if (countRegistros > 0) {
+            return res.status(400).json({ error: 'Esta persona se encuentra en las instalaciones' });
+        }
+
+        // Verificar si el RUT ya existe en la tabla personalexterno
         const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalexterno WHERE RUTPE = ?', [rutPE]);
         const count = rutExistente[0][0].count;
         if (count > 0) {
-            // El RUT ya existe, continuar con la inserción en las otras tablas
-            // insert en la tabla registros
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, selloCA, estado, chequeo]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, guiadespachoPE, fechaActualChile, selloCA, estado, chequeo]);
 
-            // insert into logs
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, guiadespachoPE, fechaActualChile, estado]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
         }
 
-        // El RUT no existe, insertarlo en la tabla personalexterno
-        await db.query('INSERT INTO personalexterno (RUTPE, NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, EMPRESAPE, ROLPE, ESTADOPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, nombrePE, apellidoPE, vehiculoPE, colorPE, patentePE, empresaPE, rolPE, estadoPE]);
+        // Insertar en personalexterno
+        await db.query('INSERT INTO personalexterno (RUTPE, NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, EMPRESAPE, ROLPE, ESTADOPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, NombrePE, ApellidoPE, VehiculoPE, ColorPE, PatentePE, EmpresaPE, RolPE, estadoPE]);
 
-        // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO ,ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, selloCA, estado, chequeo]);
-        // insert into logs
-        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePE, apellidoPE, rutPE, patentePE, rolPE, observacionesPE, guiadespachoPE, fechaActualChileFormatted, estado]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, guiadespachoPE, fechaActualChile, selloCA, estado, chequeo]);
+
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, guiadespachoPE, fechaActualChile, estado]);
 
         res.send('Entrada/salida registrada correctamente');
     } catch (error) {
@@ -614,7 +695,6 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
         res.status(500).send('Error al registrar ingreso');
     }
 });
-
 
 //GESTION PERSONAL INTERNO
 
@@ -642,16 +722,32 @@ app.get('/FormularioPersonalInterno/suggestions', async (req, res) => {
     }
 });
 
+
 app.get('/FormularioPersonalInterno/suggestion/:RUTPI', async (req, res) => {
     try {
         const { RUTPI } = req.params;
-        const q = "SELECT * FROM personalinterno WHERE RUTPI = ?";
-        const result = await db.query(q, [RUTPI]);
+        const query = `
+            SELECT 
+                pi.NOMBREPI, pi.APELLIDOPI, pi.VEHICULOPI, pi.COLORPI, 
+                pi.PATENTEPI, pi.ROLPI, png.ESTADONG
+            FROM 
+                personalinterno pi
+            LEFT JOIN 
+                personasng png ON pi.RUTPI = png.RUTNG
+            WHERE 
+                pi.RUTPI = ?
+        `;
+
+        const [result] = await db.query(query, [RUTPI]);
+
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { NOMBREPI, APELLIDOPI, VEHICULOPI, COLORPI, PATENTEPI, ROLPI } = result[0][0];
-        res.json({ NOMBREPI, APELLIDOPI, VEHICULOPI, COLORPI, PATENTEPI, ROLPI });
+
+        const { NOMBREPI, APELLIDOPI, VEHICULOPI, COLORPI, PATENTEPI, ROLPI, ESTADONG } = result[0];
+
+
+        res.json({ NOMBREPI, APELLIDOPI, VEHICULOPI, COLORPI, PATENTEPI, ROLPI, ESTADONG });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener detalles del Rut' });
@@ -660,53 +756,50 @@ app.get('/FormularioPersonalInterno/suggestion/:RUTPI', async (req, res) => {
 
 
 app.post("/FormularioPersonalInterno", async (req, res) => {
-    const rutPI = req.body.rutPI;
-    const nombrePI = req.body.NombrePI;
-    const apellidoPI = req.body.ApellidoPI;
-    const vehiculoPI = req.body.VehiculoPI;
-    const colorPI = req.body.ColorPI;
-    const patentePI = req.body.PatentePI;
-    const rolPI = req.body.RolPI;
-    const observacionesPI = req.body.ObservacionesPI;
-    const estado = "INGRESO"
+    const rutPI = req.body.RUTPI;
+    const nombrePI = req.body.NOMBREPI;
+    const apellidoPI = req.body.APELLIDOPI;
+    const vehiculoPI = req.body.VEHICULOPI;
+    const colorPI = req.body.COLORPI;
+    const patentePI = req.body.PATENTEPI;
+    const rolPI = req.body.ROLPI;
+    const observacionesPI = req.body.OBSERVACIONESPI;
+    const fechaActualChile = req.body.fechaActualChile;
+    const estado = "INGRESO";
     const estadoPI = "VIGENTE";
     const guiadespachoPI = "-";
     const selloCA = "-";
     const chequeo = "NO";
-    const fechaActualChileFormatted = req.body.fechaActualChile;
 
     try {
-        // Verificar si el RUT existe en la tabla personalinterno
+
+        const rutExistenteRegistros = await db.query('SELECT COUNT(*) AS count FROM registros WHERE RUT = ?', [rutPI]);
+        const countRegistros = rutExistenteRegistros[0][0].count;
+        if (countRegistros > 0) {
+            return res.status(400).json({ error: 'Esta persona se encuentra en las instalaciones' });
+        }
+
         const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalinterno WHERE RUTPI = ?', [rutPI]);
         const count = rutExistente[0][0].count;
         if (count > 0) {
-            // El RUT ya existe, continuar con la inserción en las otras tablas
-            // insert en la tabla registro
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, selloCA, estado, chequeo]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChile, selloCA, estado, chequeo]);
 
-            // insert into logs
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChile, estado]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
         }
 
-        // El RUT no existe, insertarlo en la tabla personalinterno
         await db.query('INSERT INTO personalinterno (RUTPI, nombrePI, apellidoPI, vehiculoPI, colorPI, patentePI, rolPI, estadoPI) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [rutPI, nombrePI, apellidoPI, vehiculoPI, colorPI, patentePI, rolPI, estadoPI]);
-
-        // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, selloCA, estado, chequeo]);
-
-        // insert into logs
-        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChileFormatted, estado]);
-
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChile, selloCA, estado, chequeo]);
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [nombrePI, apellidoPI, rutPI, patentePI, rolPI, observacionesPI, guiadespachoPI, fechaActualChile, estado]);
         res.send('Entrada/salida registrada correctamente');
+
     } catch (error) {
         console.error('Error al registrar ingreso:', error);
         res.status(500).send('Error al registrar ingreso');
     }
 });
-
 
 // GESTION CAMIONES
 
@@ -737,19 +830,35 @@ app.get('/FormularioCamiones/suggestions', async (req, res) => {
 app.get('/FormularioCamiones/suggestion/:RUTCA', async (req, res) => {
     try {
         const { RUTCA } = req.params;
-        const q = "SELECT * FROM camiones WHERE RUTCA = ?";
-        const result = await db.query(q, [RUTCA]);
+        const query = `
+            SELECT 
+                ca.CHOFERCA, ca.APELLIDOCHOFERCA, ca.PATENTECA, ca.MARCACA, 
+                ca.TIPOCA, ca.MODELOCA, ca.TIPOCA, ca.MODELOCA, ca.COLORCA, 
+                ca.EMPRESACA, png.ESTADONG
+            FROM 
+                camiones ca
+            LEFT JOIN 
+                personasng png ON ca.RUTCA = png.RUTNG
+            WHERE 
+                ca.RUTCA = ?
+        `;
+
+        const [result] = await db.query(query, [RUTCA]);
+
         if (result.length === 0) {
             return res.status(404).json({ error: 'Rut no encontrado' });
         }
-        const { CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA } = result[0][0];
-        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA: rutCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, OBSERVACIONESCA, GUIADESPACHOCA });
 
+        const { CHOFERCA, APELLIDOCHOFERCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADONG } = result[0];
+
+
+        res.json({ CHOFERCA, APELLIDOCHOFERCA, RUTCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADONG });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al obtener detalles del Rut' });
     }
 });
+
 
 app.post("/FormularioCamiones", async (req, res) => {
     const choferCA = req.body.ChoferCA;
@@ -760,40 +869,38 @@ app.post("/FormularioCamiones", async (req, res) => {
     const tipoCA = req.body.TipoCA;
     const modeloCA = req.body.ModeloCA;
     const colorCA = req.body.ColorCA;
+    const selloCA = req.body.SelloCA;
     const empresaCA = req.body.EmpresaCA;
     const observacionesCA = req.body.ObservacionesCA;
     const guiaDespachoCA = req.body.GuiaDespachoCA;
-    const selloCA = req.body.SelloCA;
-    const chequeo = "NO";
-    const estado = "INGRESO"
+    const fechaActualChile = req.body.fechaActualChile;
     const estadoCA = "VIGENTE";
-    const rolCA = "CAMION";
-    const fechaActualChileFormatted = req.body.fechaActualChile;
-
-
+    const estado = "INGRESO";
+    const chequeo = "NO";
+    const rolCA = "CAMION"
     try {
-        // Verificar si el RUT existe en la tabla personalinterno
+        // Verificar si el RUT ya existe en la tabla registros
+        const rutExistenteRegistros = await db.query('SELECT COUNT(*) AS count FROM registros WHERE RUT = ?', [rutCA]);
+        const countRegistros = rutExistenteRegistros[0][0].count;
+        if (countRegistros > 0) {
+            return res.status(400).json({ error: 'Esta persona se encuentra en las instalaciones' });
+        }
+
+        // Verificar si el RUT ya existe en la tabla personalexterno
         const rutExistente = await db.query('SELECT COUNT(*) AS count FROM camiones WHERE RUTCA = ?', [rutCA]);
         const count = rutExistente[0][0].count;
         if (count > 0) {
-            // El RUT ya existe, continuar con la inserción en las otras tablas
-            // insert en la tabla registro
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado, chequeo]);
-            // insert into logs
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChileFormatted, estado]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChile, selloCA, estado, chequeo]);
+
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, selloCA, fechaActualChile, estado]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
         }
 
-        // El RUT no existe, insertarlo en la tabla camiones
         await db.query('INSERT INTO camiones (CHOFERCA, APELLIDOCHOFERCA, RUTCA, PATENTECA, MARCACA, TIPOCA, MODELOCA, COLORCA, EMPRESACA, ESTADOCA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, marcaCA, tipoCA, modeloCA, colorCA, empresaCA, estadoCA]);
-
-        // insert en la tabla registros
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO , FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, selloCA, estado, chequeo]);
-
-        // insert into logs
-        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChileFormatted, estado]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO , FECHAINGRESO, SELLO, ESTADO, CHEQUEADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChile, selloCA, estado, chequeo]);
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, FECHAINGRESO, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [choferCA, apellidochoferCA, rutCA, patenteCA, rolCA, observacionesCA, guiaDespachoCA, fechaActualChile, estado]);
 
         res.send('Entrada/salida registrada correctamente');
     } catch (error) {
@@ -802,26 +909,12 @@ app.post("/FormularioCamiones", async (req, res) => {
     }
 });
 
-
 // GESTION DE INGRESOS/SALIDAS
 
-// app.get("/TablaIngreso", async (req, res) => {
-//     try {
-//         const [rows, fields] = await db.query("SELECT * FROM registros WHERE ESTADO = 'INGRESO'");
-//         res.json(rows);
-//     } catch (error) {
-//         console.error('Error al ejecutar la consulta:', error);
-//         res.status(500).json({ error: 'Error al ejecutar la consulta' });
-//     }
-// });
+
 app.get("/TablaIngreso", async (req, res) => {
     try {
-        const query = `
-            SELECT registros.*, progresorevision.ESTADO AS estadoRevision
-            FROM registros
-            LEFT JOIN progresorevision ON registros.IDR = progresorevision.IDR
-            WHERE registros.ESTADO = 'INGRESO'
-        `;
+        const query = `SELECT registros.*, progresorevision.ESTADO AS estadoRevision FROM registros LEFT JOIN progresorevision ON registros.IDR = progresorevision.IDR WHERE registros.ESTADO = 'INGRESO'`;
         const [rows, fields] = await db.query(query);
         res.json(rows);
     } catch (error) {
