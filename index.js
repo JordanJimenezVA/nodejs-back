@@ -265,9 +265,10 @@ app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
         const supervisor = req.body.SUPERVISOR;
         const jefet = req.body.JEFET;
         const fotos = req.files ? req.files.map(file => file.filename) : [];
-        const fechaInicio = req.body.fechaInicio;
-        const fechaFin = req.body.fechaFin;
-
+        const fechaInicio = req.body.FECHAINICIO;
+        const fechaFin = req.body.FECHAFIN;
+        console.log(fechaFin);
+        console.log(fechaInicio);
 
         await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
         await db.query('UPDATE progresorevision SET ESTADO = ? WHERE IDR = ?', ['REVISADO', IDR]);
@@ -955,13 +956,13 @@ app.post("/FormularioSalida/:IDR", async (req, res) => {
     const rol = req.body.ROL;
     const observaciones = req.body.OBSERVACIONES;
     const guiadespacho = req.body.GUIADESPACHO;
-    const selloCA = req.body.SelloCA;
-    const estadoCA = "SALIDA";
+    const sello = req.body.SELLO;
+    const estado = "SALIDA";
     const fechasalida = req.body.FECHASALIDA;
 
     try {
 
-        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHASALIDA, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, fechasalida, estadoCA]);
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, FECHASALIDA, ESTADO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, sello, fechasalida, estado]);
 
         // await db.query('UPDATE registros SET ESTADO = ? WHERE IDR = ?', ['SALIDA', IDR]);
         await db.query('DELETE FROM registros WHERE IDR = ?', [IDR]);
