@@ -318,11 +318,10 @@ app.get("/EditarPersonalInterno/:IDPI", async (req, res) => {
 });
 
 
-app.delete("/Personal%20Interno/:IDPI", async (req, res) => {
+app.delete("/Personal%20Interno/:IDPI", (req, res) => {
     const { IDPI } = req.params;
     try {
-        await db.query(`DELETE FROM personalinterno WHERE IDPI = ?`, [IDPI]);
-
+        db.query(`DELETE FROM personalinterno WHERE IDPI = ?`, [IDPI]);
         res.send("Usuario eliminado correctamente");
     } catch (error) {
         console.error("Error al eliminar registro:", error);
