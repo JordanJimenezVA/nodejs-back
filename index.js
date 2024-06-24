@@ -317,10 +317,10 @@ app.put("/EditarPersonalInterno/:IDPI", async (req, res) => {
     }
 });
 
-app.get("/EditarPersonalInterno/:IDPI", (req, res) => {
+app.get("/EditarPersonalInterno/:IDPI", async (req, res) => {
     const { IDPI } = req.params;
     try {
-        const [rows] = db.query("SELECT * FROM personalinterno WHERE IDPI = ?", [IDPI]);
+        const [rows] = await db.query("SELECT * FROM personalinterno WHERE IDPI = ?", [IDPI]);
         res.json(rows);
     } catch (error) {
         console.error('Error al ejecutar la consulta:', error);
@@ -405,16 +405,18 @@ app.put("/EditarPersonalExterno/:IDPE", async (req, res) => {
     }
 });
 
-app.get("/EditarPersonalExterno/:IDPE", (req, res) => {
+app.get("/EditarPersonalExterno/:IDPE", async (req, res) => {
     const { IDPE } = req.params;
     try {
-        const [rows] = db.query("SELECT * FROM personalexterno WHERE IDPE = ?", [IDPE]);
+        const [rows, fields] = await db.query("SELECT * FROM personalexterno WHERE IDPE = ?", [IDPE]);
         res.json(rows);
+
     } catch (error) {
         console.error('Error al ejecutar la consulta:', error);
         res.status(500).json({ error: 'Error al ejecutar la consulta' });
     }
 });
+
 
 app.delete("/Personal%20Externo/:IDPE", (req, res) => {
     const { IDPE } = req.params;
