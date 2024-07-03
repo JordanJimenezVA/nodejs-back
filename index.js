@@ -1033,3 +1033,43 @@ app.get("/ChartBox", async (req, res) => {
     }
 });
 
+
+// GESTION NOVEDADES
+
+app.get("/TablaNovedad", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM novedades");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+
+app.post("/AgregarNO", async (req, res) => {
+
+    const NotaNO = req.body.NotaNO;
+    const GuardiaNO = req.body.GuardiaNO;
+    const HoraNO = req.body.HoraNO;
+
+    try {
+        await db.query('INSERT INTO novedades (HORANO, GUARDIANO, NOTANO ) VALUES (?, ?, ?)', [HoraNO, GuardiaNO, NotaNO]);
+
+        res.send('Novedad registrada con exito');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+
+app.get("/VerNO/:IDNO", async (req, res) => {
+    const { IDNO } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM novedades WHERE IDNO = ?", [IDNO]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
