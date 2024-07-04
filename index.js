@@ -891,7 +891,7 @@ app.post("/FormularioCamiones", async (req, res) => {
     const estado = "INGRESO";
     const chequeo = "NO";
     const rolCA = "CAMION"
-    const NombreUsuario = req.body;
+    const NombreUsuario = req.body.NombreUsuario;
     try {
         // Verificar si el RUT ya existe en la tabla registros
         const rutExistenteRegistros = await db.query('SELECT COUNT(*) AS count FROM registros WHERE RUT = ?', [rutCA]);
