@@ -777,7 +777,7 @@ app.post("/FormularioPersonalInterno", async (req, res) => {
     const rolPI = req.body.ROLPI;
     const observacionesPI = req.body.OBSERVACIONESPI;
     const fechaActualChile = req.body.fechaActualChile;
-    const NombreUsuario = req.body;
+    const NombreUsuario = req.body.NombreUsuario;
     const estado = "INGRESO";
     const estadoPI = "VIGENTE";
     const guiadespachoPI = "-";
@@ -1073,3 +1073,6 @@ app.get("/VerNO/:IDNO", async (req, res) => {
         res.status(500).json({ error: 'Error al ejecutar la consulta' });
     }
 });
+
+
+//GESTION CONTRASEÑA
