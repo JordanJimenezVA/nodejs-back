@@ -278,9 +278,10 @@ app.post("/RevisionCamion/:IDR", upload.array('FOTOS'), async (req, res) => {
         const fotos = req.files ? req.files.map(file => file.filename) : [];
         const fechaInicio = req.body.FECHAINICIO;
         const fechaFin = req.body.FECHAFIN;
+        const nombreusuario = req.body.NombreUsuario;
 
 
-        await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
+        await db.query('INSERT INTO revision (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, GUIADESPACHO, SELLO, ANDEN, KILOS, PALLETS, SUPERVISOR, ENRE, JEFET, FOTOS, FECHAINICIO, FECHAFIN, IDR ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [personal, apellido, rut, patente, rol, observaciones, guiadespacho, selloCA, anden, kilos, pallets, supervisor, nombreusuario ,jefet, fotos.join(', '), fechaInicio, fechaFin, IDR]);
         await db.query('UPDATE progresorevision SET ESTADO = ? WHERE IDR = ?', ['REVISADO', IDR]);
         await db.query('UPDATE registros SET CHEQUEADO = ? WHERE IDR = ?', ['SI', IDR]);
 
