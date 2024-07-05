@@ -1077,3 +1077,90 @@ app.get("/VerNO/:IDNO", async (req, res) => {
 
 
 //GESTION CONTRASEÑA
+
+
+//GESTION USUARIOS
+
+app.get("/Usuarios", async (req, res) => {
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM usuarios");
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
+
+app.post("/AgregarU", async (req, res) => {
+
+    const rutU = req.body.RutU;
+    const nombreU = req.body.NombreU;
+    const tipoU = req.body.TipoU;
+    const passwordU = req.body.PasswordU;
+
+    try {
+        // Verificar si el RUT existe en la tabla camiones
+        const rutExistente = await db.query('SELECT COUNT(*) AS count FROM usuarios WHERE RUTU = ?', [rutU]);
+        const count = rutExistente[0][0].count;
+        if (count > 0) {
+            // El RUT ya existe en la tabla camiones
+            res.send('El RUT ya existe en la base de datos');
+            return;
+        }
+
+        // El RUT no existe, insertarlo en la tabla personalexterno
+        await db.query('INSERT INTO usuarios (RUTU, NOMBREU, TIPOU, PASSWORDU) VALUES (?, ?)', [rutU, nombreU, tipoU, passwordU]);
+
+        res.send('Ingreso realizado con exito');
+    } catch (error) {
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
+    }
+});
+
+app.delete("/Usuarios/:IDU", (req, res) => {
+    const { IDU } = req.params;
+    try {
+        db.query(`DELETE FROM usuarios WHERE IDU = ?`, [IDU]);
+
+        res.send("Usuario eliminado correctamente");
+    } catch (error) {
+        console.error("Error al eliminar registro:", error);
+        res.status(500).send("Error al eliminar registro");
+    }
+});
+
+app.put("/EditarU/:IDU", async (req, res) => {
+    const IDU = req.params.IDU;
+    const { RUTU, NOMBREU, TIPOU, PASSWORDU } = req.body;
+
+    try {
+        // Verificar si el IDPI existe en la tabla personalinterno
+        const existenciaNG = await db.query('SELECT COUNT(*) AS count FROM usuarios WHERE IDU = ?', [IDU]);
+        const count = existenciaNG[0][0].count;
+        if (count === 0) {
+            // El IDPI no existe en la tabla personalinterno
+            res.status(404).send('La Persona no existe en la base de datos');
+            return;
+        }
+
+        // El IDPI existe, actualizar los datos en la tabla personalinterno
+        await db.query('UPDATE usuarios SET RUTU = ?, NOMBREU = ?, TIPOU = ?, PASSWORDU = ? WHERE IDU = ?', [RUTU, NOMBREU, TIPOU, PASSWORDU, IDU]);
+
+        res.send('Actualización realizada con éxito');
+    } catch (error) {
+        console.error('Error al realizar la actualización:', error);
+        res.status(500).send('Error al realizar la actualización');
+    }
+});
+
+app.get("/EditarUsuarios/:IDU", async (req, res) => {
+    const { IDU } = req.params;
+    try {
+        const [rows, fields] = await db.query("SELECT * FROM usuarios WHERE IDU = ?", [IDU]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error al ejecutar la consulta:', error);
+        res.status(500).json({ error: 'Error al ejecutar la consulta' });
+    }
+});
