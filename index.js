@@ -672,6 +672,8 @@ app.get('/FormularioPersonalExterno/suggestion/:RUTPE', async (req, res) => {
 app.post("/FormularioPersonalExterno", async (req, res) => {
     const { rutPE, NombrePE, ApellidoPE, VehiculoPE, ModeloPE, ColorPE, PatentePE, EmpresaPE, RolPE, ObservacionesPE, fechaActualChile } = req.body;
     const NombreUsuarioEX = req.body.NombreUsuarioEX;
+    const GuiaDespachoPE = req.body.GuiaDespachoPE;
+    const SelloPE = req.body.SelloPE;
     const estado = "INGRESO";
     const estadoPE = "VIGENTE";
     const chequeo = "NO";
@@ -689,9 +691,9 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
         const rutExistente = await db.query('SELECT COUNT(*) AS count FROM personalexterno WHERE RUTPE = ?', [rutPE]);
         const count = rutExistente[0][0].count;
         if (count > 0) {
-            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, CHEQUEADO, GUARDIA, VEHICULO, MODELO, COLOR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, chequeo, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE]);
+            await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, CHEQUEADO, GUARDIA, VEHICULO, MODELO, COLOR, SELLO, GUIADESPACHO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, chequeo, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE, SelloPE, GuiaDespachoPE]);
 
-            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, GUARDIA, VEHICULO, MODELO, COLOR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE]);
+            await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, GUARDIA, VEHICULO, MODELO, COLOR, SELLO, GUIADESPACHO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE, SelloPE, GuiaDespachoPE]);
 
             res.send('Entrada/salida registrada correctamente');
             return;
@@ -700,9 +702,9 @@ app.post("/FormularioPersonalExterno", async (req, res) => {
         // Insertar en personalexterno
         await db.query('INSERT INTO personalexterno (RUTPE, NOMBREPE, APELLIDOPE, VEHICULOPE, COLORPE, PATENTEPE, EMPRESAPE, ROLPE, ESTADOPE, MODELOPE ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [rutPE, NombrePE, ApellidoPE, VehiculoPE, ColorPE, PatentePE, EmpresaPE, RolPE, estadoPE, ModeloPE]);
 
-        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, CHEQUEADO, GUARDIA, VEHICULO, MODELO, COLOR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, chequeo, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE]);
+        await db.query('INSERT INTO registros (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, CHEQUEADO, GUARDIA, VEHICULO, MODELO, COLOR, SELLO, GUIADESPACHO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, chequeo, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE, SelloPE, GuiaDespachoPE]);
 
-        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, GUARDIA, VEHICULO, MODELO, COLOR) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE]);
+        await db.query('INSERT INTO logs (PERSONAL, APELLIDO, RUT, PATENTE, ROL, OBSERVACIONES, FECHAINGRESO, ESTADO, GUARDIA, VEHICULO, MODELO, COLOR, SELLO, GUIADESPACHO) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [NombrePE, ApellidoPE, rutPE, PatentePE, RolPE, ObservacionesPE, fechaActualChile, estado, NombreUsuarioEX, VehiculoPE, ModeloPE, ColorPE, SelloPE, GuiaDespachoPE]);
 
         res.send('Entrada/salida registrada correctamente');
     } catch (error) {
