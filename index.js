@@ -26,10 +26,9 @@ const CLOUD_API = process.env.CLOUD_API;
 const CLOUD_KEY = process.env.CLOUD_KEY;
 //const LISTEN_SERVER = process.env.LISTEN_SERVER;
 
-
-
-
 const app = express();
+app.use(cookieParser());
+app.use(express.json());
 
 export const db = createPool({
     host: DB_HOST,
@@ -39,41 +38,17 @@ export const db = createPool({
     database: DB_DATABASE
 })
 
-cloudinary.config({ 
-    cloud_name: CLOUD_NAME, 
-    api_key: CLOUD_API, 
-    api_secret: CLOUD_KEY 
+cloudinary.config({
+    cloud_name: CLOUD_NAME,
+    api_key: CLOUD_API,
+    api_secret: CLOUD_KEY
 });
 
-app.use(express.json());
-
-// Configurar body-parser para aceptar cargas de hasta 50MB
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 
-app.use(cookieParser());
-
-// const storage = multer.diskStorage({
-//     destination: function (req, file, cb) {
-//         cb(null, 'imagenes/')
-//     },
-//     filename: function (req, file, cb) {
-//         cb(null, file.fieldname + '-' + Date.now() + '.jpg')
-//     }
-// })
-
-  
-  const upload = multer({ storage: multer.memoryStorage() });
-
-
-const __filename = fileURLToPath(import.meta.url);
-// Obtén el directorio del archivo actual
-const __dirname = path.dirname(__filename);
-app.use('/imagenes', express.static(path.join(__dirname, 'imagenes')));
 
 app.use(cors({
-    origin: ['http://localhost:5173',"https://sistemasandes.vercel.app"],
+    origin: ["http://localhost:5173", "https://sistemasandes.vercel.app"],
     methods: ["POST", "GET", "DELETE", "PUT"],
     credentials: true,
 }));
@@ -83,6 +58,24 @@ app.listen(PORT, () => {
 });
 
 
+
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, 'imagenes/')
+//     },
+//     filename: function (req, file, cb) {
+//         cb(null, file.fieldname + '-' + Date.now() + '.jpg')
+//     }
+// })
+const upload = multer({ storage: multer.memoryStorage() });
+
+
+const __filename = fileURLToPath(import.meta.url);
+// Obtén el directorio del archivo actual
+const __dirname = path.dirname(__filename);
+app.use('/imagenes', express.static(path.join(__dirname, 'imagenes')));
 
 
 //GESTION PERSONAL NG
@@ -610,13 +603,14 @@ app.post('/Login', async (req, res) => {
 
             if (isMatch) {
                 const rut = user.RUTU;
-                const secretKey = process.env.JWT_SECRET_KEY;
+                const secretKey = process.env.JWT_SECRET_KEY || 'default-secret-key';
                 const token = jwt.sign({ rut }, secretKey, { expiresIn: '1d' });
 
                 res.cookie('token', token, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
-                    maxAge: 24 * 60 * 60 * 1000
+                    maxAge: 24 * 60 * 60 * 1000,
+                    sameSite: 'None'  // Requiere 'secure: true' para CORS
                 });
                 return res.json({ Status: "Success" });
             } else {
@@ -630,30 +624,6 @@ app.post('/Login', async (req, res) => {
         return res.status(500).json({ Message: "Server Error" });
     }
 });
-
-// app.post('/Login', async (req, res) => {
-
-//     const sql = "SELECT * FROM usuarios WHERE RUTU = ? AND PASSWORDU = ?";
-//     try {
-//         const [rows] = await db.query(sql, [req.body.rutU, req.body.passwordU]);
-//         if (rows.length > 0) {
-//             // Usuario autenticado correctamente
-//             const rut = rows[0].RUTU;
-//             const token = jwt.sign({ rut }, "our-jsonwebtoken-secret-key", { expiresIn: '1d' });
-//             res.cookie('token', token);
-//             return res.json({ Status: "Success" });
-//         } else {
-//             // Credenciales incorrectas
-//             return res.json({ Message: "Credenciales incorrectas" });
-//         }
-//     } catch (err) {
-//         console.log("Error executing query:", err);
-//         return res.status(500).json({ Message: "Server Error" });
-//     }
-// });
-
-
-
 
 
 //GESTION DE PERSONAL EXTERNO
@@ -1262,31 +1232,31 @@ app.get("/TablaNovedad", async (req, res) => {
 // });
 app.post('/AgregarNO', upload.array('FOTOSNO'), async (req, res) => {
     const { NotaNO, GuardiaNO, HoraNO, IDINST } = req.body;
-  
+
     try {
-      // Subir imágenes a Cloudinary
-      const uploadedImages = await Promise.all(
-        req.files.map((file) => uploadToCloudinary(file.buffer))
-      );
-  
-      // Obtener URLs de las imágenes subidas
-      const imageUrls = uploadedImages.join(', ');
-  
-      // Guardar los datos en la base de datos
-      await db.query('INSERT INTO novedades (HORANO, GUARDIANO, NOTANO, FOTOSNO, IDINST) VALUES (?, ?, ?, ?, ?)', [
-        HoraNO,
-        GuardiaNO,
-        NotaNO,
-        imageUrls,
-        IDINST,
-      ]);
-  
-      res.send('Novedad registrada con éxito');
+        // Subir imágenes a Cloudinary
+        const uploadedImages = await Promise.all(
+            req.files.map((file) => uploadToCloudinary(file.buffer))
+        );
+
+        // Obtener URLs de las imágenes subidas
+        const imageUrls = uploadedImages.join(', ');
+
+        // Guardar los datos en la base de datos
+        await db.query('INSERT INTO novedades (HORANO, GUARDIANO, NOTANO, FOTOSNO, IDINST) VALUES (?, ?, ?, ?, ?)', [
+            HoraNO,
+            GuardiaNO,
+            NotaNO,
+            imageUrls,
+            IDINST,
+        ]);
+
+        res.send('Novedad registrada con éxito');
     } catch (error) {
-      console.error('Error al registrar ingreso:', error);
-      res.status(500).send('Error al registrar ingreso');
+        console.error('Error al registrar ingreso:', error);
+        res.status(500).send('Error al registrar ingreso');
     }
-  });
+});
 
 app.get("/VerNO/:IDNO", async (req, res) => {
     const { IDNO } = req.params;
@@ -1483,19 +1453,23 @@ app.get("/NombreUser", async (req, res) => {
 
 app.get("/IDINST", async (req, res) => {
     try {
-        // Obtener el token de las cookies
         const token = req.cookies.token;
-        console.log("Token recibido:", token); // Agrega esta línea para depuración
+        console.log("Token recibido:", token);
 
         if (!token) {
             return res.status(401).json({ error: 'No se proporcionó un token' });
         }
 
-        // Decodificar el token para obtener el RUT
-        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+        } catch (err) {
+            console.error('Error al verificar el token:', err);
+            return res.status(401).json({ error: 'Token inválido' });
+        }
+
         const rut = decoded.rut;
 
-        // Consulta para obtener el IDINST del usuario autenticado
         const [rows] = await db.query("SELECT IDINST FROM usuarios WHERE RUTU = ?", [rut]);
 
         if (rows.length > 0) {
@@ -1508,6 +1482,7 @@ app.get("/IDINST", async (req, res) => {
         res.status(500).json({ error: 'Error al ejecutar la consulta' });
     }
 });
+
 
 
 app.get("/NombreInstalacion", async (req, res) => {
