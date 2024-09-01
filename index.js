@@ -15,6 +15,7 @@ import bcrypt from 'bcrypt';
 import cloudinary from 'cloudinary';
 import { v4 as uuidv4 } from 'uuid';
 
+
 const DB_HOST = process.env.DB_HOST;
 const DB_PORT = process.env.DB_PORT;
 const DB_USER = process.env.DB_USER;
@@ -72,7 +73,7 @@ const __dirname = path.dirname(__filename);
 app.use('/imagenes', express.static(path.join(__dirname, 'imagenes')));
 
 app.use(cors({
-    origin: ["http://localhost:5173", "https://sistemasandes.vercel.app", "https://test-a21i.vercel.app"],
+    origin: ["http://localhost:5173", "https://sistemasandes.vercel.app"],
     methods: ["POST", "GET", "DELETE", "PUT"],
     credentials: true,
 }));
@@ -609,7 +610,7 @@ app.post('/Login', async (req, res) => {
 
             if (isMatch) {
                 const rut = user.RUTU;
-                const secretKey = process.env.JWT_SECRET_KEY || 'default-secret-key';
+                const secretKey = process.env.JWT_SECRET_KEY;
                 const token = jwt.sign({ rut }, secretKey, { expiresIn: '1d' });
 
                 res.cookie('token', token, {
