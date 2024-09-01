@@ -26,6 +26,7 @@ const CLOUD_API = process.env.CLOUD_API;
 const CLOUD_KEY = process.env.CLOUD_KEY;
 //const LISTEN_SERVER = process.env.LISTEN_SERVER;
 
+const verifyToken = require('./middleware/authMiddleware');
 
 
 
@@ -1481,7 +1482,7 @@ app.get("/NombreUser", async (req, res) => {
     }
 });
 
-app.get("/IDINST", async (req, res) => {
+app.get("/IDINST", verifyToken, async (req, res) => {
     try {
         // Obtener el token de las cookies
         const token = req.cookies.token;
