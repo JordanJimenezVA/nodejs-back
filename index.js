@@ -73,7 +73,7 @@ const __dirname = path.dirname(__filename);
 app.use('/imagenes', express.static(path.join(__dirname, 'imagenes')));
 
 app.use(cors({
-    origin: ["https://sistemasandes.vercel.app"],
+    origin: ['http://localhost:5173',"https://sistemasandes.vercel.app"],
     methods: ["POST", "GET", "DELETE", "PUT"],
     credentials: true,
 }));
@@ -1485,13 +1485,14 @@ app.get("/IDINST", async (req, res) => {
     try {
         // Obtener el token de las cookies
         const token = req.cookies.token;
+        console.log("Token recibido:", token); // Agrega esta línea para depuración
 
         if (!token) {
             return res.status(401).json({ error: 'No se proporcionó un token' });
         }
 
         // Decodificar el token para obtener el RUT
-        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY || 'default-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
         const rut = decoded.rut;
 
         // Consulta para obtener el IDINST del usuario autenticado
@@ -1507,6 +1508,7 @@ app.get("/IDINST", async (req, res) => {
         res.status(500).json({ error: 'Error al ejecutar la consulta' });
     }
 });
+
 
 app.get("/NombreInstalacion", async (req, res) => {
     try {
