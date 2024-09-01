@@ -610,7 +610,7 @@ app.post('/Login', async (req, res) => {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === 'production',
                     maxAge: 24 * 60 * 60 * 1000,
-                    sameSite: 'None'  // Requiere 'secure: true' para CORS
+                    sameSite: 'None' 
                 });
                 return res.json({ Status: "Success" });
             } else {
@@ -1454,7 +1454,6 @@ app.get("/NombreUser", async (req, res) => {
 app.get("/IDINST", async (req, res) => {
     try {
         const token = req.cookies.token;
-        console.log("Token recibido:", token);
 
         if (!token) {
             return res.status(401).json({ error: 'No se proporcionó un token' });
