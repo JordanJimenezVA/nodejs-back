@@ -74,7 +74,7 @@ const __dirname = path.dirname(__filename);
 app.use('/imagenes', express.static(path.join(__dirname, 'imagenes')));
 
 app.use(cors({
-    origin: ["http://localhost:5173", "https://sistemasandes.vercel.app"],
+    origin: ["https://sistemasandes.vercel.app"],
     methods: ["POST", "GET", "DELETE", "PUT"],
     credentials: true,
 }));
