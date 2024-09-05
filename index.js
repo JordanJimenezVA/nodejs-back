@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 import cloudinary from 'cloudinary';
 import { v4 as uuidv4 } from 'uuid';
-
+import authenticateToken from './authenticateToken.mjs';
 
 const DB_HOST = process.env.DB_HOST;
 const DB_PORT = process.env.DB_PORT;
@@ -605,12 +605,13 @@ app.post('/Login', async (req, res) => {
                 const rut = user.RUTU;
                 const secretKey = process.env.JWT_SECRET_KEY || 'default-secret-key';
                 const token = jwt.sign({ rut }, secretKey, { expiresIn: '1d' });
-
+                console.log("Token generado:", token); // Agrega esto para verificar el token
+                console.log('NODE_ENV:', process.env.NODE_ENV);
                 res.cookie('token', token, {
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
+                    secure: process.env.NODE_ENV === 'production', // true en producción, false en desarrollo
                     maxAge: 24 * 60 * 60 * 1000,
-                    sameSite: 'None' 
+                    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax', // None en producción, Lax en desarrollo
                 });
                 return res.json({ Status: "Success" });
             } else {
@@ -1451,23 +1452,9 @@ app.get("/NombreUser", async (req, res) => {
     }
 });
 
-app.get("/IDINST", async (req, res) => {
+app.get("/IDINST", authenticateToken, async (req, res) => {
     try {
-        const token = req.cookies.token;
-
-        if (!token) {
-            return res.status(401).json({ error: 'No se proporcionó un token' });
-        }
-
-        let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-        } catch (err) {
-            console.error('Error al verificar el token:', err);
-            return res.status(401).json({ error: 'Token inválido' });
-        }
-
-        const rut = decoded.rut;
+        const rut = req.user.rut;
 
         const [rows] = await db.query("SELECT IDINST FROM usuarios WHERE RUTU = ?", [rut]);
 
@@ -1481,7 +1468,6 @@ app.get("/IDINST", async (req, res) => {
         res.status(500).json({ error: 'Error al ejecutar la consulta' });
     }
 });
-
 
 
 app.get("/NombreInstalacion", async (req, res) => {
